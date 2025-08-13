@@ -1,0 +1,1358 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Medical Staff Calculators — Bedside Decision Support</title>
+  <meta name="description" content="Bedside medical calculators for clinicians: ABG analysis, SOFA score, fluid 4–2–1, infusion, drop factor, drug dose, bicarbonate deficit, potassium assist, BMI." />
+  <style>
+    /* == THEME == */
+    :root {
+      --bg: #eef3fb;
+      --bg-soft: #eaf0ff;
+      --card: rgba(255,255,255,0.85);
+      --border: #dde3ee;
+      --text: #101827;
+      --muted: #657391;
+      --primary: #2563eb;
+      --primary-2: #06b6d4;
+      --primary-3: #22c55e;
+      --accent: #7c3aed;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+      --ok: #16a34a;
+      --shadow: 0 10px 30px rgba(16,24,39,0.08);
+      --shadow-2: 0 16px 40px rgba(16,24,39,0.12);
+      --chip: #eef2ff;
+      --chip-text: #1e3a8a;
+      --code: #0b1020;
+      --glass: blur(10px);
+    }
+    [data-theme="dark"] {
+      --bg: #0f172a;
+      --bg-soft: #0b1328;
+      --card: rgba(17,24,39,0.7);
+      --border: #1f2937;
+      --text: #f8fafc;
+      --muted: #93a0b8;
+      --primary: #60a5fa;
+      --primary-2: #22d3ee;
+      --primary-3: #86efac;
+      --accent: #a78bfa;
+      --danger: #f87171;
+      --warning: #fbbf24;
+      --ok: #4ade80;
+      --shadow: 0 10px 30px rgba(0,0,0,0.4);
+      --shadow-2: 0 16px 40px rgba(0,0,0,0.5);
+      --chip: #1f2547;
+      --chip-text: #c7d2fe;
+      --code: #dbeafe;
+      --glass: blur(12px);
+    }
+    /* == BASE == */
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(1200px 600px at 10% -10%, rgba(37,99,235,0.15), transparent 60%),
+        radial-gradient(800px 500px at 90% 10%, rgba(6,182,212,0.15), transparent 60%),
+        radial-gradient(600px 500px at 50% 120%, rgba(124,58,237,0.12), transparent 60%),
+        var(--bg);
+      line-height: 1.55;
+    }
+    a { color: inherit; text-decoration: none; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 16px; }
+    /* == HEADER / NAV == */
+    header {
+      backdrop-filter: var(--glass);
+      position: sticky; top: 0; z-index: 50;
+      border-bottom: 1px solid var(--border);
+      background: linear-gradient(135deg, rgba(37,99,235,0.85), rgba(6,182,212,0.85));
+      color: white;
+      box-shadow: var(--shadow);
+    }
+    .header-inner { display: flex; align-items: center; gap: 12px; padding: 12px 0; }
+    .brand {
+      display: flex; align-items: center; gap: 10px; white-space: nowrap;
+      font-weight: 800; letter-spacing: 0.2px;
+    }
+    .brand .logo {
+      width: 34px; height: 34px; display: grid; place-items: center;
+      border-radius: 10px;
+      background: linear-gradient(135deg, white, #dbeafe);
+      color: #1e293b; font-size: 18px; font-weight: 900;
+      box-shadow: 0 4px 12px rgba(255,255,255,0.25) inset;
+    }
+    .brand .title { font-size: 16px; line-height: 1; }
+    .brand .subtitle { font-size: 11px; opacity: 0.9; }
+    .nav {
+      display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-left: 12px;
+    }
+    .chip {
+      padding: 6px 10px; border-radius: 999px; font-size: 12px; font-weight: 700;
+      backdrop-filter: var(--glass);
+      background: rgba(255,255,255,0.18);
+      color: white; border: 1px solid rgba(255,255,255,0.25);
+      transition: transform 0.12s ease, background 0.2s ease, color 0.2s ease;
+    }
+    .chip:hover { transform: translateY(-1px); background: rgba(255,255,255,0.28); }
+    .tools {
+      display: flex; align-items: center; gap: 10px; margin-left: auto;
+    }
+    .search {
+      position: relative; min-width: 220px; max-width: 340px; flex: 1;
+    }
+    .search input {
+      width: 100%; padding: 8px 30px 8px 32px; border-radius: 10px;
+      border: 1px solid rgba(255,255,255,0.4);
+      background: rgba(255,255,255,0.15);
+      color: white; outline: none;
+      transition: border 0.2s ease, background 0.2s ease;
+    }
+    .search input::placeholder { color: rgba(255,255,255,0.85); }
+    .search svg {
+      position: absolute; left: 8px; top: 50%; transform: translateY(-50%); opacity: 0.9;
+    }
+    .toggle {
+      display: inline-flex; align-items: center; gap: 8px; border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.4);
+      background: rgba(255,255,255,0.15); color: white; padding: 6px 10px; cursor: pointer;
+      transition: background 0.2s ease, border 0.2s ease; white-space: nowrap;
+    }
+    .toggle:hover { background: rgba(255,255,255,0.25); }
+    /* == DISCLAIMER == */
+    .notice {
+      margin: 14px auto 6px; padding: 10px 14px; border-radius: 12px;
+      border: 1px solid var(--border);
+      background: linear-gradient(180deg, rgba(255,255,255,0.7), rgba(255,255,255,0.6));
+      backdrop-filter: var(--glass);
+      color: var(--text); font-size: 13px;
+      box-shadow: var(--shadow);
+    }
+    [data-theme="dark"] .notice {
+      background: linear-gradient(180deg, rgba(17,24,39,0.7), rgba(17,24,39,0.6));
+      color: var(--text);
+    }
+    /* == GRID == */
+    .grid {
+      display: grid; gap: 16px; padding: 16px 0 28px;
+      grid-template-columns: 1fr;
+    }
+    @media (min-width: 960px) {
+      .grid { grid-template-columns: 1fr 1fr; }
+    }
+    /* == CARD == */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px; box-shadow: var(--shadow); padding: 14px;
+      transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.25s ease;
+    }
+    .card:hover { transform: translateY(-2px); box-shadow: var(--shadow-2); }
+    .card h2 {
+      margin: 0 0 8px; font-size: 18px; display: flex; align-items: center; gap: 8px;
+    }
+    .tag { background: var(--chip); color: var(--chip-text); border-radius: 999px; padding: 2px 8px; font-size: 11px; font-weight: 800; }
+    .hint { color: var(--muted); font-size: 12px; }
+    .row, .row-3 { display: grid; gap: 10px; margin-top: 10px; }
+    .row { grid-template-columns: 1fr 1fr; }
+    .row-3 { grid-template-columns: 1fr 1fr 1fr; }
+    @media (max-width: 680px) { .row, .row-3 { grid-template-columns: 1fr; } }
+    label { display: block; font-weight: 700; font-size: 12px; margin: 6px 2px 4px; color: var(--text); }
+    input, select, button, textarea {
+      width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border);
+      background: rgba(255,255,255,0.9); color: var(--text);
+      outline: none; font-size: 14px; transition: border 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+    }
+    [data-theme="dark"] input, [data-theme="dark"] select, [data-theme="dark"] textarea {
+      background: rgba(17,24,39,0.75);
+    }
+    input:focus, select:focus, textarea:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37,99,235,0.18); }
+    .actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+    .btn {
+      border: none; cursor: pointer; color: white; font-weight: 800; letter-spacing: 0.25px;
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      padding: 10px 14px; border-radius: 10px;
+      transition: transform 0.1s ease, filter 0.15s ease, opacity 0.2s ease;
+    }
+    .btn:hover { transform: translateY(-1px); filter: brightness(1.05); }
+    .btn.secondary { background: linear-gradient(135deg, #9aa3b2, #6b7280); }
+    .btn.ghost { background: transparent; color: var(--text); border: 1px dashed var(--border); }
+    .result {
+      margin-top: 10px; white-space: pre-wrap; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+      font-size: 13px; padding: 10px; border-radius: 10px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.9), rgba(255,255,255,0.75)); border: 1px solid var(--border);
+      color: var(--code);
+    }
+    [data-theme="dark"] .result { background: rgba(2,6,23,0.7); color: var(--code); }
+    details { margin-top: 8px; }
+    summary { cursor: pointer; font-weight: 800; font-size: 13px; color: var(--text); }
+    footer {
+      text-align: center; color: var(--muted); font-size: 12px; padding: 24px 0 60px;
+    }
+    .badge { font-weight: 800; font-size: 11px; padding: 2px 8px; border-radius: 999px; display: inline-block; }
+    .ok { background: rgba(22,163,74,0.12); color: var(--ok); border: 1px solid rgba(22,163,74,0.25); }
+    .warn { background: rgba(245,158,11,0.12); color: var(--warning); border: 1px solid rgba(245,158,11,0.25); }
+    .bad { background: rgba(239,68,68,0.12); color: var(--danger); border: 1px solid rgba(239,68,68,0.25); }
+    .flex { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; }
+  </style>
+</head>
+<body>
+  <!-- == HEADER == -->
+  <header>
+    <div class="container header-inner">
+      <div class="brand">
+        <div class="logo">Rx</div>
+        <div>
+          <div class="title">Medical Staff Calculators</div>
+          <div class="subtitle">Decision-support only • For licensed professionals</div>
+        </div>
+      </div>
+      <nav class="nav" aria-label="Jump to calculator">
+        <a class="chip" href="#bmi">BMI</a>
+        <a class="chip" href="#fluids">4–2–1</a>
+        <a class="chip" href="#drop">Drop</a>
+        <a class="chip" href="#infusion">Infusion</a>
+        <a class="chip" href="#drug">Drug Dose</a>
+        <a class="chip" href="#bicarb">NaHCO₃</a>
+        <a class="chip" href="#potassium">K⁺</a>
+        <a class="chip" href="#abg">ABG</a>
+        <a class="chip" href="#sofa">SOFA</a>
+        <!-- New chips -->
+        <a class="chip" href="#generalDose">Gen Dose</a>
+        <a class="chip" href="#wtDose">Wt Dose</a>
+        <a class="chip" href="#doseRange">Dose Range</a>
+        <a class="chip" href="#dripManual">Drip (Manual)</a>
+        <a class="chip" href="#pumpRate">Pump Rate</a>
+        <a class="chip" href="#bicarbCorrection">NaHCO₃ Corr</a>
+      </nav>
+      <div class="tools">
+        <div class="search">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M21 21l-4.35-4.35M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15z" stroke="white" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+          <input id="search" type="search" placeholder="Search calculators..." />
+        </div>
+        <button class="toggle" id="themeToggle" type="button" aria-label="Toggle theme">
+          <span id="themeIcon">🌞</span> Theme
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- == DISCLAIMER == -->
+  <div class="container">
+    <div class="notice">
+      This tool is for educational and decision-support purposes only. Not a substitute for clinical judgment. No medical advice, dosing protocols, or PHI storage. Validate units and ranges.
+    </div>
+  </div>
+
+  <!-- == GRID == -->
+  <main class="container grid" id="grid">
+    <!-- BMI -->
+    <section class="card" id="bmi" data-title="bmi body mass index">
+      <h2>🧮 BMI calculator <span class="tag">General</span></h2>
+      <div class="row">
+        <div>
+          <label for="bmiHeight">Height (cm)</label>
+          <input id="bmiHeight" type="number" min="30" max="250" placeholder="e.g., 170">
+        </div>
+        <div>
+          <label for="bmiWeight">Weight (kg)</label>
+          <input id="bmiWeight" type="number" min="1" max="500" placeholder="e.g., 70">
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn" onclick="calcBMI()">Calculate</button>
+        <button class="btn secondary" onclick="clearBMI()">Reset</button>
+      </div>
+      <div id="bmiOut" class="result" aria-live="polite"></div>
+      <details><summary>Formula</summary>
+        BMI = weight(kg) / [height(m)]²
+      </details>
+    </section>
+
+    <!-- Fluids 4–2–1 -->
+    <section class="card" id="fluids" data-title="fluid 4-2-1 holliday segar maintenance pediatrics">
+      <h2>💧 Fluid maintenance (4–2–1 rule) <span class="tag">Peds</span></h2>
+      <div class="row">
+        <div>
+          <label for="fWeight">Weight (kg)</label>
+          <input id="fWeight" type="number" min="0.5" max="300" placeholder="e.g., 18">
+        </div>
+        <div>
+          <label for="fMode">Mode</label>
+          <select id="fMode">
+            <option value="421" selected>4–2–1 (mL/hr)</option>
+            <option value="holliday">Holliday–Segar (24h total)</option>
+          </select>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn" onclick="calcFluids()">Calculate</button>
+        <button class="btn secondary" onclick="clearFluids()">Reset</button>
+      </div>
+      <div id="fluidsOut" class="result"></div>
+      <div class="hint">Primarily for pediatric maintenance; use clinical judgment in adults and comorbid states.</div>
+      <details><summary>Formula</summary>
+        4 mL/kg/hr for first 10 kg; 2 mL/kg/hr for next 10 kg; 1 mL/kg/hr beyond 20 kg.
+      </details>
+    </section>
+
+    <!-- Drop factor -->
+    <section class="card" id="drop" data-title="drop factor gtt drip set iv">
+      <h2>💧➡⏱ Drop factor (gtt/min) <span class="tag">IV</span></h2>
+      <div class="row">
+        <div>
+          <label for="dfRate">Infusion rate (mL/hr)</label>
+          <input id="dfRate" type="number" min="0" step="0.1" placeholder="e.g., 120">
+        </div>
+        <div>
+          <label for="dfFactor">Drop factor (gtt/mL)</label>
+          <input id="dfFactor" type="number" min="5" step="1" placeholder="10, 15, 20, 60">
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn" onclick="calcDropFactor()">Calculate</button>
+        <button class="btn secondary" onclick="clearDropFactor()">Reset</button>
+      </div>
+      <div id="dfOut" class="result"></div>
+      <details><summary>Formula</summary>gtt/min = (mL/hr × gtt/mL) / 60</details>
+    </section>
+
+    <!-- Infusion conversions -->
+    <section class="card" id="infusion" data-title="infusion syringe pump mcg kg min mg hr units">
+      <h2>💉 Infusion conversions <span class="tag">Pump</span></h2>
+      <div class="row-3">
+        <div>
+          <label for="infMode">Mode</label>
+          <select id="infMode">
+            <option value="doseToRate" selected>Dose → mL/hr</option>
+            <option value="rateToDose">mL/hr → Dose</option>
+          </select>
+        </div>
+        <div>
+          <label for="infWeight">Weight (kg, if kg-based)</label>
+          <input id="infWeight" type="number" min="0" step="0.1" placeholder="e.g., 70">
+        </div>
+        <div>
+          <label for="infSupport">Device notes</label>
+          <input id="infSupport" placeholder="optional (e.g., syringe pump)">
+        </div>
+      </div>
+      <div class="row">
+        <div>
+          <label for="infDoseValue">Desired dose value</label>
+          <input id="infDoseValue" type="number" step="0.0001" placeholder="e.g., 0.05">
+        </div>
+        <div>
+          <label for="infDoseUnit">Desired dose unit</label>
+          <select id="infDoseUnit">
+            <option value="mcg_per_kg_min">mcg/kg/min</option>
+            <option value="mg_per_kg_hr">mg/kg/hr</option>
+            <option value="mcg_per_min">mcg/min</option>
+            <option value="mg_per_hr">mg/hr</option>
+            <option value="units_per_hr">units/hr</option>
+          </select>
+        </div>
+      </div>
+      <div class="row">
+        <div>
+          <label for="infDrugAmt">Solute amount</label>
+          <input id="infDrugAmt" type="number" step="0.0001" placeholder="e.g., 200 (mg or units)">
+        </div>
+        <div>
+          <label for="infDrugAmtUnit">Amount unit</label>
+          <select id="infDrugAmtUnit">
+            <option value="mg">mg</option>
+            <option value="mcg">mcg</option>
+            <option value="units">units</option>
+          </select>
+        </div>
+      </div>
+      <div class="row">
+        <div>
+          <label for="infTotalVol">Total solution volume (mL)</label>
+          <input id="infTotalVol" type="number" step="0.01" placeholder="e.g., 50">
+        </div>
+        <div>
+          <label for="infRate">If known: pump rate (mL/hr)</label>
+          <input id="infRate" type="number" step="0.01" placeholder="for reverse calc">
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn" onclick="calcInfusion()">Calculate</button>
+        <button class="btn secondary" onclick="clearInfusion()">Reset</button>
+      </div>
+      <div id="infOut" class="result"></div>
+      <details><summary>Notes</summary>
+        Converts between desired dose and pump rate using derived concentration. You must provide regimen and preparation; no default doses.
+      </details>
+    </section>
+
+    <!-- Drug dose calculator -->
+    <section class="card" id="drug" data-title="drug dose mg kg day bsa mg per m2 formulation volume">
+      <h2>💊 Drug dose calculator <span class="tag">Dose</span></h2>
+      <div class="row">
+        <div>
+          <label for="ddSchema">Schema</label>
+          <select id="ddSchema">
+            <option value="mg_per_kg_dose">mg/kg/dose</option>
+            <option value="mg_per_kg_day">mg/kg/day</option>
+            <option value="mg_per_m2_dose">mg/m²/dose</option>
+          </select>
+        </div>
+        <div>
+          <label for="ddFreq">Doses per day (if applicable)</label>
+          <input id="ddFreq" type="number" min="1" step="1" placeholder="e.g., 3">
+        </div>
+      </div>
+      <div class="row">
+        <div>
+          <label for="ddWeight">Weight (kg)</label>
+          <input id="ddWeight" type="number" min="0.5" step="0.1" placeholder="e.g., 18">
+        </div>
+        <div>
+          <label for="ddHeight">Height (cm, for BSA)</label>
+          <input id="ddHeight" type="number" min="30" step="0.1" placeholder="e.g., 110">
+        </div>
+      </div>
+      <div class="row">
+        <div>
+          <label for="ddDoseValue">Prescribed dose value</label>
+          <input id="ddDoseValue" type="number" step="0.0001" placeholder="e.g., 10">
+        </div>
+        <div>
+          <label for="ddMaxDose">Max per dose (mg, optional)</label>
+          <input id="ddMaxDose" type="number" step="0.01" placeholder="optional">
+        </div>
+      </div>
+      <div class="row">
+        <div>
+          <label for="ddMaxDay">Max per day (mg, optional)</label>
+          <input id="ddMaxDay" type="number" step="0.01" placeholder="optional">
+        </div>
+        <div>
+          <label for="ddConc">Formulation concentration (mg/mL)</label>
+          <input id="ddConc" type="number" step="0.0001" placeholder="e.g., 40">
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn" onclick="calcDrugDose()">Calculate</button>
+        <button class="btn secondary" onclick="clearDrugDose()">Reset</button>
+      </div>
+      <div id="ddOut" class="result"></div>
+      <div class="hint">Enter your prescribed regimen; this tool does not recommend drugs or doses.</div>
+    </section>
+
+    <!-- Sodium bicarbonate “deficit” (original) -->
+    <section class="card" id="bicarb" data-title="sodium bicarbonate nahco3 deficit metabolic acidosis tbw">
+      <h2>🧪 Sodium bicarbonate “deficit” <span class="tag">Acid–base</span></h2>
+      <div class="row">
+        <div>
+          <label for="bicarbWeight">Weight (kg)</label>
+          <input id="bicarbWeight" type="number" min="0.5" step="0.1" placeholder="e.g., 70">
+        </div>
+        <div>
+          <label for="bicarbTBW">TBW factor</label>
+          <select id="bicarbTBW">
+            <option value="0.6">Adult male ~0.6</option>
+            <option value="0.5" selected>Adult female ~0.5</option>
+            <option value="0.45">Elderly ~0.45–0.5</option>
+            <option value="0.4">Conservative 0.4</option>
+          </select>
+        </div>
+      </div>
+      <div class="row">
+        <div>
+          <label for="bicarbCurrent">Current HCO₃⁻ (mEq/L)</label>
+          <input id="bicarbCurrent" type="number" step="0.1" placeholder="e.g., 12">
+        </div>
+        <div>
+          <label for="bicarbTarget">Target HCO₃⁻ (mEq/L)</label>
+          <input id="bicarbTarget" type="number" step="0.1" placeholder="e.g., 15">
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn" onclick="calcBicarb()">Calculate</button>
+        <button class="btn secondary" onclick="clearBicarb()">Reset</button>
+      </div>
+      <div id="bicarbOut" class="result"></div>
+      <div class="hint">Conservative approach; consider underlying pathology. Standard ampule = 50 mEq NaHCO₃ in 50 mL.</div>
+      <details><summary>Formula</summary>
+        Deficit (mEq) = TBW × (Target HCO₃⁻ - Current HCO₃⁻)
+      </details>
+    </section>
+
+    <!-- Potassium replacement -->
+    <section class="card" id="potassium" data-title="potassium kcl replacement hypokalemia deficit">
+      <h2>⚡ Potassium replacement <span class="tag">Electrolyte</span></h2>
+      <div class="row">
+        <div>
+          <label for="kWeight">Weight (kg)</label>
+          <input id="kWeight" type="number" min="0.5" step="0.1" placeholder="e.g., 70">
+        </div>
+        <div>
+          <label for="kCurrent">Current K⁺ (mEq/L)</label>
+          <input id="kCurrent" type="number" step="0.1" placeholder="e.g., 3.0">
+        </div>
+      </div>
+      <div class="row">
+        <div>
+          <label for="kTarget">Target K⁺ (mEq/L)</label>
+          <input id="kTarget" type="number" step="0.1" placeholder="e.g., 4.0">
+        </div>
+        <div>
+          <label for="kRoute">Route</label>
+          <select id="kRoute">
+            <option value="po">PO (oral)</option>
+            <option value="iv" selected>IV (intravenous)</option>
+          </select>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn" onclick="calcPotassium()">Calculate</button>
+        <button class="btn secondary" onclick="clearPotassium()">Reset</button>
+      </div>
+      <div id="kOut" class="result"></div>
+      <div class="hint">Estimates only; consider Mg²⁺ status. IV K⁺ requires cardiac monitoring if >10 mEq/hr.</div>
+      <details><summary>Formula</summary>
+        Deficit (mEq) = 0.4 × weight(kg) × (Target K⁺ - Current K⁺)
+      </details>
+    </section>
+
+    <!-- ABG Analysis -->
+    <section class="card" id="abg" data-title="arterial blood gas abg acid base analysis ph pco2 hco3">
+      <h2>🫁 ABG Analysis <span class="tag">Critical</span></h2>
+      <div class="row">
+        <div>
+          <label for="abgPH">pH</label>
+          <input id="abgPH" type="number" step="0.01" min="6.8" max="7.8" placeholder="e.g., 7.35">
+        </div>
+        <div>
+          <label for="abgPCO2">PCO₂ (mmHg)</label>
+          <input id="abgPCO2" type="number" step="0.1" min="10" max="100" placeholder="e.g., 40">
+        </div>
+      </div>
+      <div class="row">
+        <div>
+          <label for="abgHCO3">HCO₃⁻ (mEq/L)</label>
+          <input id="abgHCO3" type="number" step="0.1" min="5" max="50" placeholder="e.g., 24">
+        </div>
+        <div>
+          <label for="abgPO2">PO₂ (mmHg, optional)</label>
+          <input id="abgPO2" type="number" step="0.1" min="30" max="500" placeholder="e.g., 90">
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn" onclick="calcABG()">Analyze</button>
+        <button class="btn secondary" onclick="clearABG()">Reset</button>
+      </div>
+      <div id="abgOut" class="result"></div>
+      <details><summary>Normal ranges</summary>
+        pH: 7.35-7.45, PCO₂: 35-45 mmHg, HCO₃⁻: 22-26 mEq/L, PO₂: 80-100 mmHg
+      </details>
+    </section>
+
+    <!-- SOFA Score -->
+    <section class="card" id="sofa" data-title="sofa sequential organ failure assessment score icu sepsis">
+      <h2>🏥 SOFA Score <span class="tag">Critical</span></h2>
+      <div class="row">
+        <div>
+          <label for="sofaPO2">PO₂/FiO₂ ratio</label>
+          <input id="sofaPO2" type="number" step="1" min="50" max="500" placeholder="e.g., 300">
+        </div>
+        <div>
+          <label for="sofaPlatelets">Platelets (×10³/μL)</label>
+          <input id="sofaPlatelets" type="number" step="1" min="10" max="500" placeholder="e.g., 150">
+        </div>
+      </div>
+      <div class="row">
+        <div>
+          <label for="sofaBilirubin">Bilirubin (mg/dL)</label>
+          <input id="sofaBilirubin" type="number" step="0.1" min="0.1" max="20" placeholder="e.g., 1.2">
+        </div>
+        <div>
+          <label for="sofaMAP">Mean Arterial Pressure</label>
+          <select id="sofaMAP">
+            <option value="0">≥70 mmHg</option>
+            <option value="1">&lt;70 mmHg</option>
+            <option value="2">Dopamine ≤5 or dobutamine</option>
+            <option value="3">Dopamine 5.1-15 or norepinephrine ≤0.1</option>
+            <option value="4">Dopamine >15 or norepinephrine >0.1</option>
+          </select>
+        </div>
+      </div>
+      <div class="row">
+        <div>
+          <label for="sofaGCS">Glasgow Coma Scale</label>
+          <input id="sofaGCS" type="number" step="1" min="3" max="15" placeholder="e.g., 15">
+        </div>
+        <div>
+          <label for="sofaCreatinine">Creatinine (mg/dL)</label>
+          <input id="sofaCreatinine" type="number" step="0.1" min="0.1" max="10" placeholder="e.g., 1.2">
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn" onclick="calcSOFA()">Calculate</button>
+        <button class="btn secondary" onclick="clearSOFA()">Reset</button>
+      </div>
+      <div id="sofaOut" class="result"></div>
+      <details><summary>Interpretation</summary>
+        SOFA 0-6: &lt;10% mortality, 7-9: 15-20%, 10-12: 40-50%, 13-14: 50-60%, 15-24: &gt;80%
+      </details>
+    </section>
+
+    <!-- NEW: General Drug Dosage -->
+    <section class="card" id="generalDose" data-title="general drug dosage D over H times Q">
+      <h2>🧪 General Drug Dosage <span class="tag">Dose</span></h2>
+      <div class="row-3">
+        <div>
+          <label for="gdD">Dose desired (D)</label>
+          <input id="gdD" type="number" step="0.0001" placeholder="e.g., 500">
+        </div>
+        <div>
+          <label for="gdH">Dose on hand (H)</label>
+          <input id="gdH" type="number" step="0.0001" placeholder="e.g., 250">
+        </div>
+        <div>
+          <label for="gdQ">Quantity on hand (Q)</label>
+          <input id="gdQ" type="number" step="0.0001" placeholder="e.g., 1 (tab) or 5 (mL)">
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn" onclick="calcGeneralDose()">Calculate</button>
+        <button class="btn secondary" onclick="clearGeneralDose()">Reset</button>
+      </div>
+      <div id="gdOut" class="result"></div>
+      <details><summary>Formula</summary>
+        Required Dose = (D / H) × Q
+      </details>
+    </section>
+
+    <!-- NEW: Body Weight–Based Dosage -->
+    <section class="card" id="wtDose" data-title="body weight based dosage mg per kg dosing volume lb to kg">
+      <h2>⚖️ Body Weight–Based Dosage <span class="tag">Dose</span></h2>
+      <div class="row">
+        <div>
+          <label for="wdWeightKg">Weight (kg)</label>
+          <input id="wdWeightKg" type="number" step="0.1" placeholder="e.g., 18">
+        </div>
+        <div>
+          <label for="wdWeightLb">Weight (lb)</label>
+          <input id="wdWeightLb" type="number" step="0.1" placeholder="optional">
+        </div>
+      </div>
+      <div class="row">
+        <div>
+          <label for="wdDosePerKg">Dosage ordered (mg/kg)</label>
+          <input id="wdDosePerKg" type="number" step="0.0001" placeholder="e.g., 10">
+        </div>
+        <div>
+          <label for="wdOnHand">Amount on hand (mg)</label>
+          <input id="wdOnHand" type="number" step="0.0001" placeholder="e.g., 40">
+        </div>
+      </div>
+      <div class="row">
+        <div>
+          <label for="wdQuantityMl">Quantity (mL)</label>
+          <input id="wdQuantityMl" type="number" step="0.0001" placeholder="e.g., 5">
+        </div>
+        <div>
+          <label for="wdDosesPerDay">Doses per day</label>
+          <input id="wdDosesPerDay" type="number" step="1" min="1" placeholder="e.g., 3">
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn" onclick="calcWeightDose()">Calculate</button>
+        <button class="btn secondary" onclick="clearWeightDose()">Reset</button>
+      </div>
+      <div id="wdOut" class="result"></div>
+      <div class="hint">Stage 1: Required Dosage (mg) = kg × mg/kg. Stage 2: Volume = (Required Dosage / Amount on Hand (mg)) × Quantity (mL). lb→kg uses kg = lb / 2.2.</div>
+      <details><summary>Formula</summary>
+        Required Dosage (mg) = Weight (kg) × Dosage Ordered (mg/kg)
+        Volume (mL) = (Required Dosage / Amount on Hand (mg)) × Quantity (mL)
+      </details>
+    </section>
+
+    <!-- NEW: Dosage Range Check -->
+    <section class="card" id="doseRange" data-title="dosage range check min max mg per kg compare daily dose">
+      <h2>📏 Dosage Range Check <span class="tag">Dose</span></h2>
+      <div class="row">
+        <div>
+          <label for="drWeightKg">Weight (kg)</label>
+          <input id="drWeightKg" type="number" step="0.1" placeholder="e.g., 18">
+        </div>
+        <div>
+          <label for="drDailyDose">Total daily dose (mg)</label>
+          <input id="drDailyDose" type="number" step="0.01" placeholder="e.g., 600">
+        </div>
+      </div>
+      <div class="row">
+        <div>
+          <label for="drLower">Lower range (mg/kg)</label>
+          <input id="drLower" type="number" step="0.01" placeholder="e.g., 20">
+        </div>
+        <div>
+          <label for="drUpper">Upper range (mg/kg)</label>
+          <input id="drUpper" type="number" step="0.01" placeholder="e.g., 40">
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn" onclick="calcDoseRange()">Calculate</button>
+        <button class="btn secondary" onclick="clearDoseRange()">Reset</button>
+      </div>
+      <div id="drOut" class="result"></div>
+      <details><summary>Formula</summary>
+        Min Dose = kg × Lower (mg/kg); Max Dose = kg × Upper (mg/kg). Compare total daily dose with range.
+      </details>
+    </section>
+
+    <!-- NEW: IV Drip Rate (Manual) -->
+    <section class="card" id="dripManual" data-title="iv drip manual gtts per min volume time drop factor">
+      <h2>🧵 IV Drip Rate (Manual) <span class="tag">IV</span></h2>
+      <div class="row">
+        <div>
+          <label for="dmVolume">Volume (mL)</label>
+          <input id="dmVolume" type="number" step="0.01" placeholder="e.g., 500">
+        </div>
+        <div>
+          <label for="dmTimeMin">Time (min)</label>
+          <input id="dmTimeMin" type="number" step="1" placeholder="e.g., 120">
+        </div>
+      </div>
+      <div class="row">
+        <div>
+          <label for="dmDropFactor">Drop factor (gtt/mL)</label>
+          <input id="dmDropFactor" type="number" step="1" placeholder="10, 15, 20, 60">
+        </div>
+        <div>
+          <label>&nbsp;</label>
+          <div class="hint">Macrosets: 10–20 gtt/mL; Microset: 60 gtt/mL</div>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn" onclick="calcDripManual()">Calculate</button>
+        <button class="btn secondary" onclick="clearDripManual()">Reset</button>
+      </div>
+      <div id="dmOut" class="result"></div>
+      <details><summary>Formula</summary>
+        Flow Rate (gtts/min) = (Volume (mL) / Time (min)) × Drop Factor (gtt/mL)
+      </details>
+    </section>
+
+    <!-- NEW: Infusion Pump Flow Rate -->
+    <section class="card" id="pumpRate" data-title="infusion pump flow rate mL per hour volume time">
+      <h2>⏱️ Infusion Pump Flow Rate <span class="tag">Pump</span></h2>
+      <div class="row">
+        <div>
+          <label for="prVolume">Volume (mL)</label>
+          <input id="prVolume" type="number" step="0.01" placeholder="e.g., 1000">
+        </div>
+        <div>
+          <label for="prTimeHours">Time (h)</label>
+          <input id="prTimeHours" type="number" step="0.01" placeholder="e.g., 8">
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn" onclick="calcPumpRate()">Calculate</button>
+        <button class="btn secondary" onclick="clearPumpRate()">Reset</button>
+      </div>
+      <div id="prOut" class="result"></div>
+      <details><summary>Formula</summary>
+        Flow Rate (mL/h) = Volume (mL) / Time (h)
+      </details>
+    </section>
+
+    <!-- NEW: Sodium Bicarbonate Correction -->
+    <section class="card" id="bicarbCorrection" data-title="sodium bicarbonate correction base deficit 0.3 times kg">
+      <h2>🧪 Sodium Bicarbonate Correction <span class="tag">Acid–base</span></h2>
+      <div class="row">
+        <div>
+          <label for="bcWeight">Weight (kg)</label>
+          <input id="bcWeight" type="number" step="0.1" placeholder="e.g., 70">
+        </div>
+        <div>
+          <label for="bcBaseDeficit">Base deficit (mEq/L)</label>
+          <input id="bcBaseDeficit" type="number" step="0.1" placeholder="e.g., 10">
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn" onclick="calcBicarbCorrection()">Calculate</button>
+        <button class="btn secondary" onclick="clearBicarbCorrection()">Reset</button>
+      </div>
+      <div id="bcOut" class="result"></div>
+      <div class="hint">mEq needed = 0.3 × weight(kg) × base deficit. This uses a conservative distribution factor.</div>
+      <details><summary>Formula</summary>
+        mEq needed = 0.3 × weight(kg) × base deficit
+      </details>
+    </section>
+  </main>
+
+  <footer class="container">
+    <p>Educational tool for medical professionals • Not for diagnostic use • Validate all calculations</p>
+  </footer>
+
+  <script>
+    // Theme Toggle
+    const themeToggle = document.getElementById('themeToggle');
+    const themeIcon = document.getElementById('themeIcon');
+    const html = document.documentElement;
+
+    function updateTheme() {
+      const isDark = html.getAttribute('data-theme') === 'dark';
+      themeIcon.textContent = isDark ? '🌙' : '🌞';
+    }
+
+    themeToggle.addEventListener('click', () => {
+      const currentTheme = html.getAttribute('data-theme');
+      const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+      html.setAttribute('data-theme', newTheme);
+      localStorage.setItem('theme', newTheme);
+      updateTheme();
+    });
+
+    // Load saved theme
+    const savedTheme = localStorage.getItem('theme') || 'light';
+    html.setAttribute('data-theme', savedTheme);
+    updateTheme();
+
+    // Search functionality
+    const searchInput = document.getElementById('search');
+    const cards = document.querySelectorAll('.card');
+
+    searchInput?.addEventListener('input', (e) => {
+      const query = e.target.value.toLowerCase();
+      cards.forEach(card => {
+        const title = card.getAttribute('data-title') || '';
+        const text = card.textContent.toLowerCase();
+        const match = title.includes(query) || text.includes(query);
+        card.style.display = match ? 'block' : 'none';
+      });
+    });
+
+    // Utility
+    const safeNum = v => {
+      const n = parseFloat(v);
+      return Number.isFinite(n) ? n : null;
+    };
+
+    // BMI
+    function calcBMI() {
+      const height = safeNum(document.getElementById('bmiHeight').value);
+      const weight = safeNum(document.getElementById('bmiWeight').value);
+      const output = document.getElementById('bmiOut');
+
+      if (!height || !weight) {
+        output.textContent = 'Please enter both height and weight';
+        return;
+      }
+      const heightM = height / 100;
+      const bmi = weight / (heightM * heightM);
+      let category = '';
+      if (bmi < 18.5) category = 'Underweight';
+      else if (bmi < 25) category = 'Normal weight';
+      else if (bmi < 30) category = 'Overweight';
+      else category = 'Obese';
+
+      output.textContent = `BMI: ${bmi.toFixed(1)} kg/m²\nCategory: ${category}`;
+    }
+    function clearBMI() {
+      document.getElementById('bmiHeight').value = '';
+      document.getElementById('bmiWeight').value = '';
+      document.getElementById('bmiOut').textContent = '';
+    }
+
+    // Fluids 4-2-1
+    function calcFluids() {
+      const weight = safeNum(document.getElementById('fWeight').value);
+      const mode = document.getElementById('fMode').value;
+      const output = document.getElementById('fluidsOut');
+      if (!weight) { output.textContent = 'Please enter weight'; return; }
+
+      let rate = 0;
+      if (weight <= 10) rate = weight * 4;
+      else if (weight <= 20) rate = (10 * 4) + ((weight - 10) * 2);
+      else rate = (10 * 4) + (10 * 2) + ((weight - 20) * 1);
+
+      if (mode === 'holliday') {
+        const dailyTotal = rate * 24;
+        output.textContent = `Daily maintenance: ${dailyTotal.toFixed(0)} mL/day\nHourly rate: ${rate.toFixed(1)} mL/hr`;
+      } else {
+        output.textContent = `4-2-1 rate: ${rate.toFixed(1)} mL/hr`;
+      }
+    }
+    function clearFluids() {
+      document.getElementById('fWeight').value = '';
+      document.getElementById('fluidsOut').textContent = '';
+    }
+
+    // Drop Factor
+    function calcDropFactor() {
+      const rate = safeNum(document.getElementById('dfRate').value);
+      const factor = safeNum(document.getElementById('dfFactor').value);
+      const output = document.getElementById('dfOut');
+      if (!rate || !factor) { output.textContent = 'Please enter both infusion rate and drop factor'; return; }
+      const gttPerMin = (rate * factor) / 60;
+      output.textContent = `Drop rate: ${gttPerMin.toFixed(1)} gtt/min`;
+    }
+    function clearDropFactor() {
+      document.getElementById('dfRate').value = '';
+      document.getElementById('dfFactor').value = '';
+      document.getElementById('dfOut').textContent = '';
+    }
+
+    // Infusion conversions
+    function calcInfusion() {
+      const mode = document.getElementById('infMode').value;
+      const weight = safeNum(document.getElementById('infWeight').value) || 70;
+      const doseValue = safeNum(document.getElementById('infDoseValue').value);
+      const doseUnit = document.getElementById('infDoseUnit').value;
+      const drugAmt = safeNum(document.getElementById('infDrugAmt').value);
+      const drugAmtUnit = document.getElementById('infDrugAmtUnit').value;
+      const totalVol = safeNum(document.getElementById('infTotalVol').value);
+      const rate = safeNum(document.getElementById('infRate').value);
+      const output = document.getElementById('infOut');
+
+      if (!doseValue || !drugAmt || !totalVol) {
+        output.textContent = 'Please enter dose value, drug amount, and total volume';
+        return;
+      }
+      // Convert drug amount to mg equivalent (units remain units)
+      let drugAmtMg = drugAmt;
+      let concUnit = 'mg/mL';
+      if (drugAmtUnit === 'mcg') { drugAmtMg = drugAmt / 1000; concUnit = 'mg/mL'; }
+      else if (drugAmtUnit === 'units') { drugAmtMg = drugAmt; concUnit = 'units/mL'; }
+
+      const concentration = drugAmtMg / totalVol; // mg/mL or units/mL
+
+      if (mode === 'doseToRate') {
+        let dosePerHour = 0;
+        switch(doseUnit) {
+          case 'mcg_per_kg_min': dosePerHour = (doseValue * weight * 60) / 1000; break;
+          case 'mg_per_kg_hr':    dosePerHour = doseValue * weight; break;
+          case 'mcg_per_min':     dosePerHour = (doseValue * 60) / 1000; break;
+          case 'mg_per_hr':       dosePerHour = doseValue; break;
+          case 'units_per_hr':    dosePerHour = doseValue; break;
+        }
+        const pumpRate = dosePerHour / concentration;
+        output.textContent = `Pump rate: ${pumpRate.toFixed(2)} mL/hr\nConcentration: ${concentration.toFixed(2)} ${concUnit}`;
+      } else {
+        if (!rate) { output.textContent = 'Please enter pump rate for reverse calculation'; return; }
+        const dosePerHour = rate * concentration;
+        let finalDose = 0, unit = '';
+        switch(doseUnit) {
+          case 'mcg_per_kg_min': finalDose = (dosePerHour * 1000) / (weight * 60); unit = 'mcg/kg/min'; break;
+          case 'mg_per_kg_hr':    finalDose = dosePerHour / weight; unit = 'mg/kg/hr'; break;
+          case 'mcg_per_min':     finalDose = (dosePerHour * 1000) / 60; unit = 'mcg/min'; break;
+          case 'mg_per_hr':       finalDose = dosePerHour; unit = 'mg/hr'; break;
+          case 'units_per_hr':    finalDose = dosePerHour; unit = 'units/hr'; break;
+        }
+        output.textContent = `Actual dose: ${finalDose.toFixed(3)} ${unit}\nConcentration: ${concentration.toFixed(2)} ${concUnit}`;
+      }
+    }
+    function clearInfusion() {
+      document.getElementById('infDoseValue').value = '';
+      document.getElementById('infWeight').value = '';
+      document.getElementById('infSupport').value = '';
+      document.getElementById('infDrugAmt').value = '';
+      document.getElementById('infTotalVol').value = '';
+      document.getElementById('infRate').value = '';
+      document.getElementById('infOut').textContent = '';
+    }
+
+    // Drug Dose (existing)
+    function calcDrugDose() {
+      const schema = document.getElementById('ddSchema').value;
+      const freq = safeNum(document.getElementById('ddFreq').value) || 1;
+      const weight = safeNum(document.getElementById('ddWeight').value);
+      const height = safeNum(document.getElementById('ddHeight').value);
+      const doseValue = safeNum(document.getElementById('ddDoseValue').value);
+      const maxDose = safeNum(document.getElementById('ddMaxDose').value);
+      const maxDay = safeNum(document.getElementById('ddMaxDay').value);
+      const conc = safeNum(document.getElementById('ddConc').value);
+      const output = document.getElementById('ddOut');
+
+      if (!weight || !doseValue || !conc) {
+        output.textContent = 'Please enter weight, dose value, and concentration';
+        return;
+      }
+
+      let calculatedDose = 0;
+      let bsa = 0;
+
+      if (schema === 'mg_per_m2_dose') {
+        if (!height) { output.textContent = 'Height required for BSA calculation'; return; }
+        bsa = Math.sqrt((height * weight) / 3600);
+        calculatedDose = doseValue * bsa;
+      } else if (schema === 'mg_per_kg_dose') {
+        calculatedDose = doseValue * weight;
+      } else if (schema === 'mg_per_kg_day') {
+        calculatedDose = (doseValue * weight) / freq;
+      }
+
+      if (maxDose && calculatedDose > maxDose) calculatedDose = maxDose;
+
+      const dailyDose = calculatedDose * freq;
+      if (maxDay && dailyDose > maxDay) {
+        calculatedDose = maxDay / freq;
+      }
+
+      const volume = calculatedDose / conc;
+
+      let result = `Calculated dose: ${calculatedDose.toFixed(1)} mg per dose\n`;
+      result += `Volume: ${volume.toFixed(2)} mL per dose\n`;
+      result += `Daily total: ${(calculatedDose * freq).toFixed(1)} mg/day`;
+      if (bsa > 0) result += `\nBSA: ${bsa.toFixed(2)} m²`;
+
+      output.textContent = result;
+    }
+    function clearDrugDose() {
+      document.getElementById('ddFreq').value = '';
+      document.getElementById('ddWeight').value = '';
+      document.getElementById('ddHeight').value = '';
+      document.getElementById('ddDoseValue').value = '';
+      document.getElementById('ddMaxDose').value = '';
+      document.getElementById('ddMaxDay').value = '';
+      document.getElementById('ddConc').value = '';
+      document.getElementById('ddOut').textContent = '';
+    }
+
+    // Bicarbonate (original TBW method)
+    function calcBicarb() {
+      const weight = safeNum(document.getElementById('bicarbWeight').value);
+      const tbwFactor = safeNum(document.getElementById('bicarbTBW').value);
+      const current = safeNum(document.getElementById('bicarbCurrent').value);
+      const target = safeNum(document.getElementById('bicarbTarget').value);
+      const output = document.getElementById('bicarbOut');
+      if (!weight || !current || !target) {
+        output.textContent = 'Please enter weight, current HCO₃⁻, and target HCO₃⁻';
+        return;
+      }
+      const tbw = weight * tbwFactor;
+      const deficit = tbw * (target - current);
+      const ampules = deficit / 50;
+      output.textContent = `HCO₃⁻ deficit: ${deficit.toFixed(0)} mEq\nAmpules needed: ${ampules.toFixed(1)} (50 mEq each)\nTBW: ${tbw.toFixed(1)} L`;
+    }
+    function clearBicarb() {
+      document.getElementById('bicarbWeight').value = '';
+      document.getElementById('bicarbCurrent').value = '';
+      document.getElementById('bicarbTarget').value = '';
+      document.getElementById('bicarbOut').textContent = '';
+    }
+
+    // Potassium
+    function calcPotassium() {
+      const weight = safeNum(document.getElementById('kWeight').value);
+      const current = safeNum(document.getElementById('kCurrent').value);
+      const target = safeNum(document.getElementById('kTarget').value);
+      const route = document.getElementById('kRoute').value;
+      const output = document.getElementById('kOut');
+      if (!weight || !current || !target) {
+        output.textContent = 'Please enter weight, current K⁺, and target K⁺';
+        return;
+      }
+      const deficit = 0.4 * weight * (target - current);
+      let result = `K⁺ deficit: ${deficit.toFixed(0)} mEq\n`;
+      if (route === 'po') {
+        result += `PO dosing: Consider 40-80 mEq divided doses\n(e.g., 20 mEq tabs × ${Math.ceil(deficit/20)} over 24-48h)`;
+      } else {
+        const maxRate = 10;
+        const hours = Math.ceil(deficit / maxRate);
+        result += `IV replacement: Max 10 mEq/hr\nEstimated time: ${hours} hours\n⚠️ Cardiac monitoring required`;
+      }
+      output.textContent = result;
+    }
+    function clearPotassium() {
+      document.getElementById('kWeight').value = '';
+      document.getElementById('kCurrent').value = '';
+      document.getElementById('kTarget').value = '';
+      document.getElementById('kOut').textContent = '';
+    }
+
+    // ABG
+    function calcABG() {
+      const ph = safeNum(document.getElementById('abgPH').value);
+      const pco2 = safeNum(document.getElementById('abgPCO2').value);
+      const hco3 = safeNum(document.getElementById('abgHCO3').value);
+      const po2 = safeNum(document.getElementById('abgPO2').value);
+      const output = document.getElementById('abgOut');
+      if (!ph || !pco2 || !hco3) { output.textContent = 'Please enter pH, PCO₂, and HCO₃⁻'; return; }
+
+      let result = '';
+      if (ph < 7.35) {
+        result += 'PRIMARY: Acidemia\n';
+        if (hco3 < 22) {
+          result += 'Type: Metabolic acidosis\n';
+          const expectedPCO2 = 40 - (24 - hco3) * 1.2;
+          const compensated = Math.abs(pco2 - expectedPCO2) < 5;
+          result += `Expected PCO₂: ${expectedPCO2.toFixed(1)} mmHg\nCompensation: ${compensated ? 'Appropriate' : 'Incomplete'}\n`;
+        } else {
+          result += 'Type: Respiratory acidosis\n';
+          const expectedHCO3 = 24 + ((pco2 - 40) * 0.35);
+          result += `Expected HCO₃⁻: ${expectedHCO3.toFixed(1)} mEq/L\n`;
+        }
+      } else if (ph > 7.45) {
+        result += 'PRIMARY: Alkalemia\n';
+        if (hco3 > 26) {
+          result += 'Type: Metabolic alkalosis\n';
+          const expectedPCO2 = 40 + (hco3 - 24) * 0.7;
+          result += `Expected PCO₂: ${expectedPCO2.toFixed(1)} mmHg\n`;
+        } else {
+          result += 'Type: Respiratory alkalosis\n';
+          const expectedHCO3 = 24 - ((40 - pco2) * 0.2);
+          result += `Expected HCO₃⁻: ${expectedHCO3.toFixed(1)} mEq/L\n`;
+        }
+      } else {
+        result += 'PRIMARY: Normal pH\n';
+      }
+
+      result += '\nOxygenation:\n';
+      if (po2) {
+        if (po2 < 80) result += `PO₂: ${po2} mmHg (Low)\n`;
+        else if (po2 > 100) result += `PO₂: ${po2} mmHg (High)\n`;
+        else result += `PO₂: ${po2} mmHg (Normal)\n`;
+      }
+      output.textContent = result;
+    }
+    function clearABG() {
+      document.getElementById('abgPH').value = '';
+      document.getElementById('abgPCO2').value = '';
+      document.getElementById('abgHCO3').value = '';
+      document.getElementById('abgPO2').value = '';
+      document.getElementById('abgOut').textContent = '';
+    }
+
+    // SOFA
+    function calcSOFA() {
+      const po2Ratio = safeNum(document.getElementById('sofaPO2').value);
+      const platelets = safeNum(document.getElementById('sofaPlatelets').value);
+      const bilirubin = safeNum(document.getElementById('sofaBilirubin').value);
+      const mapScore = safeNum(document.getElementById('sofaMAP').value);
+      const gcs = safeNum(document.getElementById('sofaGCS').value);
+      const creatinine = safeNum(document.getElementById('sofaCreatinine').value);
+      const output = document.getElementById('sofaOut');
+
+      if (!po2Ratio || !platelets || !bilirubin || mapScore === null || !gcs || !creatinine) {
+        output.textContent = 'Please fill in all required fields';
+        return;
+      }
+
+      let totalScore = 0;
+      let breakdown = 'SOFA Component Scores:\n\n';
+
+      // Respiratory
+      let respScore = 0;
+      if (po2Ratio < 100) respScore = 4;
+      else if (po2Ratio < 200) respScore = 3;
+      else if (po2Ratio < 300) respScore = 2;
+      else if (po2Ratio < 400) respScore = 1;
+      totalScore += respScore;
+      breakdown += `Respiratory (PO₂/FiO₂): ${respScore}\n`;
+
+      // Coagulation
+      let coagScore = 0;
+      if (platelets < 20) coagScore = 4;
+      else if (platelets < 50) coagScore = 3;
+      else if (platelets < 100) coagScore = 2;
+      else if (platelets < 150) coagScore = 1;
+      totalScore += coagScore;
+      breakdown += `Coagulation (Platelets): ${coagScore}\n`;
+
+      // Hepatic
+      let hepaticScore = 0;
+      if (bilirubin >= 12) hepaticScore = 4;
+      else if (bilirubin >= 6) hepaticScore = 3;
+      else if (bilirubin >= 2) hepaticScore = 2;
+      else if (bilirubin >= 1.2) hepaticScore = 1;
+      totalScore += hepaticScore;
+      breakdown += `Hepatic (Bilirubin): ${hepaticScore}\n`;
+
+      // Cardiovascular
+      totalScore += mapScore;
+      breakdown += `Cardiovascular: ${mapScore}\n`;
+
+      // CNS
+      let cnsScore = 0;
+      if (gcs < 6) cnsScore = 4;
+      else if (gcs < 10) cnsScore = 3;
+      else if (gcs < 13) cnsScore = 2;
+      else if (gcs < 15) cnsScore = 1;
+      totalScore += cnsScore;
+      breakdown += `CNS (GCS): ${cnsScore}\n`;
+
+      // Renal
+      let renalScore = 0;
+      if (creatinine >= 5) renalScore = 4;
+      else if (creatinine >= 3.5) renalScore = 3;
+      else if (creatinine >= 2) renalScore = 2;
+      else if (creatinine >= 1.2) renalScore = 1;
+      totalScore += renalScore;
+      breakdown += `Renal (Creatinine): ${renalScore}\n`;
+
+      breakdown += `\nTOTAL SOFA SCORE: ${totalScore}\n\n`;
+
+      let mortality = '';
+      if (totalScore <= 6) mortality = '<10%';
+      else if (totalScore <= 9) mortality = '15-20%';
+      else if (totalScore <= 12) mortality = '40-50%';
+      else if (totalScore <= 14) mortality = '50-60%';
+      else mortality = '>80%';
+
+      breakdown += `Predicted mortality: ${mortality}`;
+      output.textContent = breakdown;
+    }
+    function clearSOFA() {
+      document.getElementById('sofaPO2').value = '';
+      document.getElementById('sofaPlatelets').value = '';
+      document.getElementById('sofaBilirubin').value = '';
+      document.getElementById('sofaMAP').selectedIndex = 0;
+      document.getElementById('sofaGCS').value = '';
+      document.getElementById('sofaCreatinine').value = '';
+      document.getElementById('sofaOut').textContent = '';
+    }
+
+    // NEW: General Drug Dosage
+    function calcGeneralDose() {
+      const D = safeNum(document.getElementById('gdD').value);
+      const H = safeNum(document.getElementById('gdH').value);
+      const Q = safeNum(document.getElementById('gdQ').value);
+      const out = document.getElementById('gdOut');
+      if (!D || !H || !Q) { out.textContent = 'Enter D, H, and Q'; return; }
+      if (H === 0) { out.textContent = 'Dose on hand (H) cannot be zero'; return; }
+      const required = (D / H) * Q;
+      out.textContent = `Required dose to administer: ${required.toFixed(3)} (same units as Q)`;
+    }
+    function clearGeneralDose() {
+      document.getElementById('gdD').value = '';
+      document.getElementById('gdH').value = '';
+      document.getElementById('gdQ').value = '';
+      document.getElementById('gdOut').textContent = '';
+    }
+
+    // NEW: Body Weight–Based Dosage
+    function calcWeightDose() {
+      let kg = safeNum(document.getElementById('wdWeightKg').value);
+      const lb = safeNum(document.getElementById('wdWeightLb').value);
+      const mgPerKg = safeNum(document.getElementById('wdDosePerKg').value);
+      const onHandMg = safeNum(document.getElementById('wdOnHand').value);
+      const qtyMl = safeNum(document.getElementById('wdQuantityMl').value);
+      const dosesPerDay = safeNum(document.getElementById('wdDosesPerDay').value) || 1;
+      const out = document.getElementById('wdOut');
+
+      if (!kg && lb) kg = lb / 2.2;
+      if (!kg || !mgPerKg || !onHandMg || !qtyMl) {
+        out.textContent = 'Enter weight (kg or lb), mg/kg, amount on hand (mg), and quantity (mL)';
+        return;
+      }
+
+      const requiredMg = kg * mgPerKg; // Stage 1
+      const volumePerDose = (requiredMg / onHandMg) * qtyMl; // Stage 2
+      const dailyTotalMg = requiredMg * dosesPerDay;
+      const dailyVolume = volumePerDose * dosesPerDay;
+
+      out.textContent =
+        `Required dose: ${requiredMg.toFixed(2)} mg per dose\n` +
+        `Volume to administer: ${volumePerDose.toFixed(2)} mL per dose\n` +
+        `Daily total: ${dailyTotalMg.toFixed(2)} mg/day in ${dosesPerDay} dose(s)\n` +
+        `Daily volume: ${dailyVolume.toFixed(2)} mL/day\n` +
+        `Weight used: ${kg.toFixed(2)} kg`;
+    }
+    function clearWeightDose() {
+      document.getElementById('wdWeightKg').value = '';
+      document.getElementById('wdWeightLb').value = '';
+      document.getElementById('wdDosePerKg').value = '';
+      document.getElementById('wdOnHand').value = '';
+      document.getElementById('wdQuantityMl').value = '';
+      document.getElementById('wdDosesPerDay').value = '';
+      document.getElementById('wdOut').textContent = '';
+    }
+
+    // NEW: Dosage Range Check
+    function calcDoseRange() {
+      const kg = safeNum(document.getElementById('drWeightKg').value);
+      const totalDaily = safeNum(document.getElementById('drDailyDose').value);
+      const lower = safeNum(document.getElementById('drLower').value);
+      const upper = safeNum(document.getElementById('drUpper').value);
+      const out = document.getElementById('drOut');
+
+      if (!kg || !totalDaily || !lower || !upper) {
+        out.textContent = 'Enter weight, total daily dose, and lower/upper range';
+        return;
+      }
+      const minDose = kg * lower;
+      const maxDose = kg * upper;
+
+      let status = 'Within range';
+      if (totalDaily < minDose) status = 'Below range';
+      else if (totalDaily > maxDose) status = 'Above range';
+
+      out.textContent =
+        `Min: ${minDose.toFixed(1)} mg/day\n` +
+        `Max: ${maxDose.toFixed(1)} mg/day\n` +
+        `Your daily dose: ${totalDaily.toFixed(1)} mg/day\n` +
+        `Assessment: ${status}`;
+    }
+    function clearDoseRange() {
+      document.getElementById('drWeightKg').value = '';
+      document.getElementById('drDailyDose').value = '';
+      document.getElementById('drLower').value = '';
+      document.getElementById('drUpper').value = '';
+      document.getElementById('drOut').textContent = '';
+    }
+
+    // NEW: IV Drip Rate (Manual)
+    function calcDripManual() {
+      const vol = safeNum(document.getElementById('dmVolume').value);
+      const timeMin = safeNum(document.getElementById('dmTimeMin').value);
+      const df = safeNum(document.getElementById('dmDropFactor').value);
+      const out = document.getElementById('dmOut');
+      if (!vol || !timeMin || !df) { out.textContent = 'Enter volume, time (min), and drop factor'; return; }
+      const gttsPerMin = (vol / timeMin) * df;
+      out.textContent = `Flow rate: ${gttsPerMin.toFixed(1)} gtt/min`;
+    }
+    function clearDripManual() {
+      document.getElementById('dmVolume').value = '';
+      document.getElementById('dmTimeMin').value = '';
+      document.getElementById('dmDropFactor').value = '';
+      document.getElementById('dmOut').textContent = '';
+    }
+
+    // NEW: Infusion Pump Flow Rate
+    function calcPumpRate() {
+      const vol = safeNum(document.getElementById('prVolume').value);
+      const timeH = safeNum(document.getElementById('prTimeHours').value);
+      const out = document.getElementById('prOut');
+      if (!vol || !timeH) { out.textContent = 'Enter volume and time (hours)'; return; }
+      if (timeH === 0) { out.textContent = 'Time (h) cannot be zero'; return; }
+      const rate = vol / timeH;
+      out.textContent = `Flow rate: ${rate.toFixed(2)} mL/h`;
+    }
+    function clearPumpRate() {
+      document.getElementById('prVolume').value = '';
+      document.getElementById('prTimeHours').value = '';
+      document.getElementById('prOut').textContent = '';
+    }
+
+    // NEW: Sodium Bicarbonate Correction (0.3 × kg × base deficit)
+    function calcBicarbCorrection() {
+      const kg = safeNum(document.getElementById('bcWeight').value);
+      const baseDef = safeNum(document.getElementById('bcBaseDeficit').value);
+      const out = document.getElementById('bcOut');
+      if (!kg || !baseDef) { out.textContent = 'Enter weight and base deficit'; return; }
+      const mEqNeeded = 0.3 * kg * baseDef;
+      const amps = mEqNeeded / 50; // 50 mEq per standard amp
+      out.textContent = `Estimated NaHCO₃ needed: ${mEqNeeded.toFixed(0)} mEq\n≈ ${amps.toFixed(1)} ampules (50 mEq each)`;
+    }
+    function clearBicarbCorrection() {
+      document.getElementById('bcWeight').value = '';
+      document.getElementById('bcBaseDeficit').value = '';
+      document.getElementById('bcOut').textContent = '';
+    }
+  </script>
+</body>
+</html>
